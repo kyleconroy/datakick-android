@@ -37,6 +37,8 @@ import java.util.Date;
 public class PhotoActivity extends Activity {
     private static final int REQUEST_IMAGE_CAPTURE = 1;
     private static final String TAG = "Datakick";
+    private static final String STATE_FILES = "DatakickFiles";
+
     private ArrayAdapter<String> photoAdapter;
     private ArrayList<String> photoPaths;
     private String gtin;
@@ -49,11 +51,23 @@ public class PhotoActivity extends Activity {
         ListView listview = (ListView)findViewById(R.id.listView);
 
         gtin = getIntent().getStringExtra("gtin");
-        photoPaths = new ArrayList<String>();
+
+        if (savedInstanceState == null) {
+            photoPaths = new ArrayList<String>();
+        } else {
+            photoPaths = savedInstanceState.getStringArrayList(STATE_FILES);
+        }
+
         photoAdapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_list_item_1, photoPaths);
         photoAdapter.setNotifyOnChange(true);
         listview.setAdapter(photoAdapter);
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        savedInstanceState.putStringArrayList(STATE_FILES, photoPaths);
+        super.onSaveInstanceState(savedInstanceState);
     }
 
     private File createImageFile() throws IOException {
