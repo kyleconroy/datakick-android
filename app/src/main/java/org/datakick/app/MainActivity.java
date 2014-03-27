@@ -38,11 +38,13 @@ public class MainActivity extends Activity {
 
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
         scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
-        if (scanResult != null && scanResult.getFormatName().length() > 0) {
-            Log.v(TAG, scanResult.getContents());
-            Intent photoIntent = new Intent(this, PhotoActivity.class);
-            photoIntent.putExtra("gtin", scanResult.getContents());
-            startActivity(photoIntent);
+        if (scanResult != null) {
+            if (scanResult.getContents() != null) {
+                Log.v(TAG, scanResult.getContents());
+                Intent photoIntent = new Intent(this, PhotoActivity.class);
+                photoIntent.putExtra("gtin", scanResult.getContents());
+                startActivity(photoIntent);
+            }
         }
     }
 

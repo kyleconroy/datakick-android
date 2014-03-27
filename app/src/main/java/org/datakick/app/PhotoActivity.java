@@ -38,9 +38,11 @@ public class PhotoActivity extends Activity {
     private static final int REQUEST_IMAGE_CAPTURE = 1;
     private static final String TAG = "Datakick";
     private static final String STATE_FILES = "DatakickFiles";
+    private static final String STATE_CURRENT_FILE = "DatakickFile";
 
     private ArrayAdapter<String> photoAdapter;
     private ArrayList<String> photoPaths;
+    private String currentPath;
     private String gtin;
 
     @Override
@@ -54,8 +56,10 @@ public class PhotoActivity extends Activity {
 
         if (savedInstanceState == null) {
             photoPaths = new ArrayList<String>();
+            currentPath = "";
         } else {
             photoPaths = savedInstanceState.getStringArrayList(STATE_FILES);
+            currentPath = savedInstanceState.getString(STATE_CURRENT_FILE);
         }
 
         photoAdapter = new ArrayAdapter<String>(this,
@@ -67,6 +71,7 @@ public class PhotoActivity extends Activity {
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         savedInstanceState.putStringArrayList(STATE_FILES, photoPaths);
+        savedInstanceState.putString(STATE_CURRENT_FILE, currentPath);
         super.onSaveInstanceState(savedInstanceState);
     }
 
@@ -83,7 +88,7 @@ public class PhotoActivity extends Activity {
         );
 
         // Save a file: path for use with ACTION_VIEW intents
-        photoAdapter.add(image.getAbsolutePath());
+        currentPath = image.getAbsolutePath();
         return image;
     }
 
@@ -143,6 +148,7 @@ public class PhotoActivity extends Activity {
     public void uploadProduct(View view) {
         String[] paths = photoPaths.toArray(new String[photoPaths.size()]);
         new UploadPhotosTask(gtin).execute(paths);
+        finish();
     }
 
     public void takePhoto(View view) {
@@ -161,6 +167,18 @@ public class PhotoActivity extends Activity {
                 startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
             }
         }
+    }
+
+    public void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK) {
+            // Why is data null here?
+            if (data == null) {
+                photoAdapter.add(currentPath);
+                currentPath = "";
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
