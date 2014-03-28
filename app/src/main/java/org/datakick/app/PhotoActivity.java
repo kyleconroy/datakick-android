@@ -75,23 +75,6 @@ public class PhotoActivity extends Activity {
         super.onSaveInstanceState(savedInstanceState);
     }
 
-    private File createImageFile() throws IOException {
-        // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_DATAKICK_" + timeStamp + "_";
-        File storageDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES);
-        File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".jpg",         /* suffix */
-                storageDir      /* directory */
-        );
-
-        // Save a file: path for use with ACTION_VIEW intents
-        currentPath = image.getAbsolutePath();
-        return image;
-    }
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -99,64 +82,13 @@ public class PhotoActivity extends Activity {
         return true;
     }
 
-    private class UploadPhotosTask extends AsyncTask<String, Integer, Integer> {
-        private String gtin;
-
-        public UploadPhotosTask(String gtin) {
-            this.gtin = gtin;
-        }
-
-        protected Integer doInBackground(String... paths) {
-            int count = paths.length;
-            String url = "https://www.datakick.org/api/items/" + gtin + "/images";
-            for (int i = 0; i < count; i++) {
-                HttpResponse response = null;
-                HttpClient client = new DefaultHttpClient();
-                HttpPost post = new HttpPost(url);
-                MultipartEntityBuilder multipartEntity = MultipartEntityBuilder.create();
-                multipartEntity.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
-                multipartEntity.addPart("image", new FileBody(new File(paths[i])));
-                post.setEntity(multipartEntity.build());
-
-                try {
-                    response = client.execute(post);
-                } catch (IOException ex) {
-                    Log.e(TAG, "Failed uploading " + paths[i], ex);
-                    continue;
-                }
-
-                if (response != null ) {
-                    HttpEntity entity = response.getEntity();
-                    try {
-                        entity.consumeContent();
-                    } catch (IOException ex) {
-                        Log.e(TAG, "Couldn't consume the response body");
-                    }
-                    client.getConnectionManager().shutdown();
-                }
-            }
-            return 0;
-        }
-
-        protected void onProgressUpdate(Integer... progress) {
-        }
-
-        protected void onPostExecute(Long result) {
-        }
-    }
-
-    public void uploadProduct(View view) {
-        String[] paths = photoPaths.toArray(new String[photoPaths.size()]);
-        new UploadPhotosTask(gtin).execute(paths);
-        finish();
-    }
-
     public void takePhoto(View view) {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
             File photoFile = null;
             try {
-                photoFile = createImageFile();
+                photoFile = DatakickService.createImageFile();
+                currentPath = photoFile.getAbsolutePath();
             } catch (IOException ex) {
                 Log.e(TAG, "Couldn't create image file");
                 return;
@@ -172,9 +104,9 @@ public class PhotoActivity extends Activity {
     public void onActivityResult(int requestCode, int resultCode, Intent data)
     {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK) {
-            // Why is data null here?
             if (data == null) {
                 photoAdapter.add(currentPath);
+                DatakickService.uploadPhoto(getApplicationContext(), gtin, currentPath);
                 currentPath = "";
             }
         }

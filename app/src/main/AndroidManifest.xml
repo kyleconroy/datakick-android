@@ -2,9 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.datakick.app" >
 
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="18" />
-
     <uses-permission android:name="android.permission.INTERNET" />
 
     <uses-feature
@@ -31,8 +31,13 @@
         </activity>
         <activity
             android:name="org.datakick.app.PhotoActivity"
-            android:label="@string/title_activity_photo" >
+            android:label="Add Images">
         </activity>
+
+        <service
+            android:name="org.datakick.app.DatakickService"
+            android:exported="false" >
+        </service>
     </application>
 
 </manifest>
