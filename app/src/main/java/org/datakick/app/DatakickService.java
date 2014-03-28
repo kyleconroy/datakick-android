@@ -1,11 +1,15 @@
 package org.datakick.app;
 
 import android.app.IntentService;
-import android.content.Intent;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Environment;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import org.apache.http.HttpEntity;
@@ -15,12 +19,8 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.FileBody;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.content.InputStreamBody;
 import org.apache.http.impl.client.DefaultHttpClient;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -39,6 +39,7 @@ public class DatakickService extends IntentService {
     private static final String ACTION_UPLOAD_PHOTO = "org.datakick.app.action.UPLOAD_PHOTO";
     private static final String EXTRA_GTIN = "org.datakick.app.extra.GTIN";
     private static final String EXTRA_PHOTO_PATH = "org.datakick.app.extra.PHOTO_PATH";
+    private static final int NOTIFY_ID = 1234;
 
     /**
      * Starts this service to upload a photo to Datakick. If
@@ -85,14 +86,14 @@ public class DatakickService extends IntentService {
         try {
             output = createImageFile();
         } catch (IOException e) {
-            Log.e(TAG,"Couldn't create new output file for scaled image");
+            Log.e(TAG, "Couldn't create new output file for scaled image");
             return;
         }
 
         try {
             out = new FileOutputStream(output.getAbsolutePath());
         } catch (FileNotFoundException e) {
-            Log.e(TAG,"Couldn't find output file for scaled image");
+            Log.e(TAG, "Couldn't find output file for scaled image");
             return;
         }
 
@@ -102,9 +103,10 @@ public class DatakickService extends IntentService {
             Log.e(TAG, "Couldn't write bitmap to ByteStream");
             return;
         } finally {
-            try{
+            try {
                 out.close();
-            } catch(Throwable ignore) {}
+            } catch (Throwable ignore) {
+            }
         }
 
         String url = "https://www.datakick.org/api/items/" + gtin + "/images";
@@ -123,7 +125,7 @@ public class DatakickService extends IntentService {
             Log.e(TAG, "Failed uploading " + photoPath, ex);
         }
 
-        if (response != null ) {
+        if (response != null) {
             HttpEntity entity = response.getEntity();
             try {
                 entity.consumeContent();
@@ -135,6 +137,26 @@ public class DatakickService extends IntentService {
 
         // Delete the temporary file
         output.delete();
+
+        Uri product = Uri.parse("https://www.datakick.org/" + gtin);
+        Intent notificationIntent = new Intent(Intent.ACTION_VIEW, product);
+        PendingIntent resultPendingIntent =
+                PendingIntent.getActivity(
+                        this,
+                        0,
+                        notificationIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                );
+        NotificationCompat.Builder mBuilder;
+        mBuilder = new NotificationCompat.Builder(this)
+                .setSmallIcon(android.R.drawable.ic_menu_upload)
+                .setContentTitle("Uploaded image to Datakick")
+                .setContentText("View images on Datakick website");
+        mBuilder.setContentIntent(resultPendingIntent);
+
+        NotificationManager mNotifyMgr =
+                (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        mNotifyMgr.notify(NOTIFY_ID, mBuilder.build());
     }
 
     public static File createImageFile() throws IOException {
@@ -148,7 +170,6 @@ public class DatakickService extends IntentService {
                 ".jpg",         /* suffix */
                 storageDir      /* directory */
         );
-
         // Save a file: path for use with ACTION_VIEW intents
         return image;
     }
